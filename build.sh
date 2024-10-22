@@ -6,6 +6,7 @@ update_my_repo() {
     local repo="$1"
     local branch="$2"
     local upstream_url="$3"
+    local update_submodule=0
 
     cd "$repo"
     git checkout "$branch"
@@ -13,12 +14,21 @@ update_my_repo() {
     git remote | grep -q "upstream" || \
         git remote add upstream "$upstream_url"
 
-    git fetch upstream
-    git rebase upstream/"$branch"
-    git push --force-with-lease
+    if [ -n "$(git fetch upstream 2>&1)" ]; then
+        git rebase upstream/"$branch"
+        git push --force-with-lease
+
+        update_submodule=1
+    fi
+
+    cd ..
+
+    if [ "$update_submodule" -eq 1 ]; then
+        git add "$repo"
+        git commit -m "Update $repo"
+    fi
 
     echo ""
-    cd ..
 }
 
 update_my_repos() {
@@ -30,6 +40,8 @@ update_my_repos() {
 
     update_my_repo "vendor_hardware_overlay" "pie" \
         "https://github.com/TrebleDroid/vendor_hardware_overlay.git"
+
+    git push
 }
 
 init_lineage_repo() {
